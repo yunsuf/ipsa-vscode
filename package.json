@@ -1,21 +1,69 @@
 {
-  "name": "ipsa-taskmaster",
-  "version": "1.0.0",
-  "description": "Task management client for the IPSA project",
-  "main": "taskmaster-client.js",
-  "bin": {
-    "taskmaster": "./taskmaster-client.js"
+  "name": "ipsa",
+  "displayName": "Iterative Problem-Solving Assistant",
+  "description": "A VS Code extension for structured, iterative problem-solving with AI assistants",
+  "version": "0.1.0",
+  "publisher": "ipsa-team",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:ipsa.startNewSession",
+    "onCommand:ipsa.resumeSession",
+    "onCommand:ipsa.endSession"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ipsa.startNewSession",
+        "title": "IPSA: Start New Iterative Session"
+      },
+      {
+        "command": "ipsa.resumeSession",
+        "title": "IPSA: Resume Iterative Session"
+      },
+      {
+        "command": "ipsa.endSession",
+        "title": "IPSA: End Current Session"
+      }
+    ]
   },
   "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p ./",
+    "watch-tests": "tsc -p ./ --watch",
+    "pretest": "npm run compile-tests && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
     "start": "node taskmaster-client.js",
     "generate": "node taskmaster-client.js generate"
   },
+  "devDependencies": {
+    "@types/glob": "^7.2.0",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.60.0",
+    "@typescript-eslint/eslint-plugin": "^5.30.0",
+    "@typescript-eslint/parser": "^5.30.0",
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^8.18.0",
+    "glob": "^8.0.3",
+    "mocha": "^10.0.0",
+    "ts-loader": "^9.3.1",
+    "typescript": "^4.7.4",
+    "webpack": "^5.73.0",
+    "webpack-cli": "^4.10.0"
+  },
   "dependencies": {
     "chalk": "^4.1.2",
-    "commander": "^9.4.1"
-  },
-  "engines": {
-    "node": ">=14.0.0"
-  },
-  "private": true
+    "commander": "^9.4.1",
+    "markdown-it": "^13.0.1"
+  }
 }

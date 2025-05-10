@@ -1,0 +1,122 @@
+---
+description: Guidelines for working with Task Master subtasks, particularly ID formatting and numbering conventions
+globs: tasks/*.json, tasks/*.txt, **/*.js, **/*.ts, **/*.md
+alwaysApply: true
+---
+
+# Task Master Subtasks
+
+This document provides detailed guidelines for working with subtasks in Task Master, focusing on ID formatting, management, and common issues.
+
+## Subtask ID Format Requirements
+
+- **Always use strings for subtask IDs** in tasks.json
+  ```json
+  // ✅ DO: Use string format for subtask IDs
+  "subtasks": [
+    {
+      "id": "1",
+      "title": "Initialize Flutter Project",
+      ...
+    }
+  ]
+
+  // ❌ DON'T: Use numeric format which causes issues
+  "subtasks": [
+    {
+      "id": 1,
+      "title": "Initialize Flutter Project",
+      ...
+    }
+  ]
+  ```
+
+- **Number subtasks sequentially starting from 1** for each parent task
+  ```json
+  // ✅ DO: Number subtasks sequentially from 1 within each parent task
+  "subtasks": [
+    { "id": "1", "title": "First subtask", ... },
+    { "id": "2", "title": "Second subtask", ... },
+    { "id": "3", "title": "Third subtask", ... }
+  ]
+  ```
+  - Each parent task has its own sequentially numbered subtasks starting from 1
+  - Task Master automatically displays them with parent prefixes (e.g., 1.1, 1.2, 1.3)
+  - In the tasks.json file, always use simple sequential numbering (not prefixed with parent ID)
+
+## Display vs. Storage Format Difference
+
+- **Storage format (in tasks.json)**: Simple sequential strings ("1", "2", "3")
+- **Display format (in CLI output)**: Parent-prefixed IDs (1.1, 1.2, 1.3)
+- This difference is by design and should be maintained
+- When referring to subtasks in commands, use the display format (e.g., `task-master set-status --id=1.2 --status=done`)
+- When editing tasks.json directly, use the storage format (e.g., `"id": "2"`)
+
+## Common Subtask Operations
+
+### Adding Subtasks
+
+- Via CLI: `task-master add-subtask --parent=1 --title="New subtask title"`
+- Via MCP: `add_subtask` with `id: "1"` and `title: "New subtask title"`
+- Manually in tasks.json: Add to the "subtasks" array with proper sequential numbering:
+  ```json
+  "subtasks": [
+    { "id": "1", "title": "Existing subtask", ... },
+    { "id": "2", "title": "New subtask", ... } // Next sequential ID
+  ]
+  ```
+
+### Updating Subtask Status
+
+- Cannot update via CLI directly with subtask ID
+- Manually edit tasks.json:
+  ```json
+  "subtasks": [
+    {
+      "id": "1",
+      "title": "Initialize Flutter Project",
+      "status": "in-progress", // Change this value manually
+      ...
+    }
+  ]
+  ```
+- Run `task-master generate` after editing
+
+### Removing Subtasks
+
+- Via CLI: `task-master remove-subtask --id=1.2`
+- Via MCP: `remove_subtask` with `id: "1.2"`
+- Manually in tasks.json: Remove the object from the "subtasks" array
+- Do not renumber remaining subtasks - maintain their original IDs to avoid breaking dependencies
+
+## Dependency Management with Subtasks
+
+- Reference subtasks in dependencies using display format (with parent prefix):
+  ```json
+  "dependencies": ["1.1", "1.2"]
+  ```
+- Only reference valid subtask IDs
+- Using numeric values instead of strings will cause errors in dependency validation
+- Run `task-master validate-dependencies` to check your dependency setup
+
+## After Editing Subtasks
+
+- Always run `task-master generate` to regenerate task files
+- Verify changes via `task-master list --with-subtasks`
+- Check the subtask files with `cat tasks/task_001.txt` (for task ID 1)
+
+## Common Subtask Issues
+
+- **Cannot access subtask directly**: Use parent task access instead
+  - ✅ DO: `task-master show --id=1` to view task 1 with all its subtasks
+  - ❌ DON'T: `task-master show --id=1.1` as this often fails to find the subtask
+
+- **Subtask numbering errors**: Always use sequential string IDs in tasks.json
+  - ✅ DO: `"id": "1"`, `"id": "2"`, `"id": "3"`
+  - ❌ DON'T: `"id": 1`, `"id": 1.1`, `"id": "1.1"`
+
+- **Missing subtasks after expansion**: Check Anthropic API status
+  - If the API is unavailable, add subtasks manually with correct formatting
+  - Follow the sequential numbering convention within each parent task
+
+This specialized reference should be used alongside the main [@taskmaster.mdc](mdc:.cursor/rules/@taskmaster.mdc) document.
