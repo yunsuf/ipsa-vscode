@@ -1,0 +1,21 @@
+{
+  "name": "ipsa-taskmaster",
+  "version": "1.0.0",
+  "description": "Task management client for the IPSA project",
+  "main": "taskmaster-client.js",
+  "bin": {
+    "taskmaster": "./taskmaster-client.js"
+  },
+  "scripts": {
+    "start": "node taskmaster-client.js",
+    "generate": "node taskmaster-client.js generate"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^9.4.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "private": true
+}
