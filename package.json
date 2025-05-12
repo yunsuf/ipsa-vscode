@@ -4,6 +4,11 @@
   "description": "A VS Code extension for structured, iterative problem-solving with AI assistants",
   "version": "0.1.0",
   "publisher": "ipsa-team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ipsa-team/ipsa"
+  },
   "engines": {
     "vscode": "^1.60.0"
   },
@@ -11,12 +16,32 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:ipsa.startNewSession",
-    "onCommand:ipsa.resumeSession",
-    "onCommand:ipsa.endSession"
+    "onStartupFinished",
+    "workspaceContains:*.plan.md"
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "IPSA",
+      "properties": {
+        "ipsa.preferredAssistant": {
+          "type": "string",
+          "enum": ["clipboard", "copilot", "cursor", "other"],
+          "default": "clipboard",
+          "description": "The preferred AI assistant type to use"
+        },
+        "ipsa.git.autoCommit": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically commit plan document changes"
+        },
+        "ipsa.prompt.maxPreviousFindings": {
+          "type": "number",
+          "default": 5,
+          "description": "Maximum number of previous findings to include in prompts"
+        }
+      }
+    },
     "commands": [
       {
         "command": "ipsa.startNewSession",
@@ -29,12 +54,33 @@
       {
         "command": "ipsa.endSession",
         "title": "IPSA: End Current Session"
+      },
+      {
+        "command": "ipsa.createPlanDocument",
+        "title": "IPSA: Create Plan Document"
+      },
+      {
+        "command": "ipsa.openPlanDocument",
+        "title": "IPSA: Open Plan Document"
+      },
+      {
+        "command": "ipsa.showSessionStatus",
+        "title": "IPSA: Show Session Status"
+      },
+      {
+        "command": "ipsa.listSessions",
+        "title": "IPSA: List All Sessions"
+      },
+      {
+        "command": "ipsa.managePreferences",
+        "title": "IPSA: Manage Preferences"
       }
     ]
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
     "compile": "webpack",
+    "compile:dev": "webpack --mode development",
     "watch": "webpack --watch",
     "package": "webpack --mode production --devtool hidden-source-map",
     "compile-tests": "tsc -p ./",
@@ -62,8 +108,9 @@
     "webpack-cli": "^4.10.0"
   },
   "dependencies": {
+    "@types/markdown-it": "^14.1.2",
     "chalk": "^4.1.2",
     "commander": "^9.4.1",
-    "markdown-it": "^13.0.1"
+    "markdown-it": "^13.0.2"
   }
 }

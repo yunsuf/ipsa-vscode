@@ -30,3 +30,8 @@ node_modules/
 # Task files
 tasks.json
 tasks/ 
+
+# Test workspace
+test-workspace
+.vscode-test
+out
