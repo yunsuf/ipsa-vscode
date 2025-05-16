@@ -25,10 +25,23 @@ export interface StateManager {
   getSession(sessionId: string): IPSASession | undefined;
 
   /**
+   * Gets the current active session.
+   * @returns The current session or undefined if no session is active
+   */
+  getCurrentSession(): IPSASession | undefined;
+
+  /**
    * Delete a session.
    * @param sessionId The session ID
    */
   deleteSession(sessionId: string): Promise<void>;
+
+  /**
+   * Updates the path of a plan document in a session.
+   * @param sessionId The session ID
+   * @param newPath The new path to the plan document
+   */
+  updateSessionPlanDocumentPath(sessionId: string, newPath: string): Promise<void>;
 
   /**
    * Save a user preference.

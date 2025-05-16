@@ -17,7 +17,7 @@ export interface PlanStep {
   /**
    * Current status of the step.
    */
-  status: 'pending' | 'in-progress' | 'completed' | 'skipped';
+  status: 'pending' | 'in-progress' | 'completed' | 'skipped' | 'done';
 
   /**
    * Order of the step in the plan.
@@ -37,7 +37,7 @@ export interface Iteration {
   /**
    * ID of the step this iteration is associated with.
    */
-  stepId: string;
+  stepId?: string;
 
   /**
    * The prompt sent to the AI assistant.
@@ -57,7 +57,7 @@ export interface Iteration {
   /**
    * Timestamp when the iteration was created.
    */
-  timestamp: Date;
+  timestamp?: Date;
 }
 
 /**
@@ -152,4 +152,66 @@ export interface PlanDocumentManager {
    * @returns The updated document
    */
   addFinding(document: PlanDocument, iterationNumber: number, finding: Finding): Promise<PlanDocument>;
+
+  /**
+   * Archives a plan document by moving it to the archived directory.
+   * @param document The document to archive
+   * @returns The updated document with the new path
+   */
+  archivePlanDocument(document: PlanDocument): Promise<PlanDocument>;
+
+  /**
+   * Unarchives a plan document by moving it from the archived directory to the active directory.
+   * @param document The document to unarchive
+   * @returns The updated document with the new path
+   */
+  unarchivePlanDocument(document: PlanDocument): Promise<PlanDocument>;
+
+  /**
+   * Lists all plan documents in the active directory.
+   * @returns Array of plan document paths
+   */
+  listActivePlanDocuments(): Promise<string[]>;
+
+  /**
+   * Lists all plan documents in the archived directory.
+   * @returns Array of plan document paths
+   */
+  listArchivedPlanDocuments(): Promise<string[]>;
+
+  /**
+   * Migrates existing plan documents from the workspace root to the organized folder structure.
+   * @returns Number of migrated documents
+   */
+  migratePlanDocuments(): Promise<number>;
+
+  /**
+   * Updates a plan step.
+   * @param document The document to update
+   * @param stepId The ID of the step to update
+   * @param updates Partial updates to apply
+   * @returns The updated document
+   */
+  updatePlanStep(
+    document: PlanDocument,
+    stepId: string,
+    updates: Partial<PlanStep>
+  ): Promise<PlanDocument>;
+
+  /**
+   * Checks if a file exists.
+   * @param filePath The path to the file
+   * @returns True if the file exists, false otherwise
+   */
+  fileExists(filePath: string): Promise<boolean>;
+
+  /**
+   * Gets the active plans directory path.
+   */
+  get activePlansRoot(): string;
+
+  /**
+   * Gets the archived plans directory path.
+   */
+  get archivedPlansRoot(): string;
 }

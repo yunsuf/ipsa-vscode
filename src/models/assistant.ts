@@ -10,10 +10,9 @@ export interface AssistantAdapter {
 
   /**
    * Get a response from the AI assistant.
-   * @param options Options for getting the response
    * @returns The response from the AI assistant
    */
-  getResponse(options?: { timeout?: number }): Promise<string>;
+  getResponse(): Promise<string>;
 }
 
 /**
@@ -83,4 +82,24 @@ export interface AIAssistantIntegration {
    * @returns The preferred assistant type
    */
   getPreferredAssistantType(): AssistantType;
+
+  /**
+   * Get all registered assistant types.
+   * @returns Array of registered assistant types
+   */
+  getRegisteredAssistantTypes(): AssistantType[];
+
+  /**
+   * Check if an assistant type is available.
+   * @param type The assistant type to check
+   * @returns True if the assistant type is available, false otherwise
+   */
+  isAssistantTypeAvailable(type: AssistantType): boolean;
+
+  /**
+   * Get the display name for an assistant type.
+   * @param type The assistant type
+   * @returns The display name for the assistant type
+   */
+  getAssistantTypeDisplayName(type: AssistantType): string;
 }

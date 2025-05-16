@@ -99,4 +99,25 @@ export class Logger {
       }
     }
   }
+
+  /**
+   * Log a warning
+   * @param message The warning message
+   */
+  public static warn(message: string): void {
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${timestamp}] WARNING: ${message}\n`;
+
+    // Log to console
+    console.warn(message);
+
+    // Log to file if initialized
+    if (this.initialized && this.logFilePath) {
+      try {
+        fs.appendFileSync(this.logFilePath, logMessage);
+      } catch (err) {
+        console.error('Failed to write to log file:', err);
+      }
+    }
+  }
 }

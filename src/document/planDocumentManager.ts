@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { PlanDocument, PlanDocumentManager, Iteration, Finding, PlanStep } from '../models';
 import { MarkdownProcessor } from './markdownProcessor';
+import { ConfigManager } from '../state';
 
 /**
  * Implementation of the PlanDocumentManager interface.
@@ -9,6 +10,27 @@ import { MarkdownProcessor } from './markdownProcessor';
 export class PlanDocumentManagerImpl implements PlanDocumentManager {
   private _markdownProcessor: MarkdownProcessor;
   private _workspaceRoot: string;
+  private _ipsaRoot: string;
+  private _plansRoot: string;
+  private _activePlansRoot: string;
+  private _archivedPlansRoot: string;
+  private _templatesRoot: string;
+  private _configManager: ConfigManager;
+  private _useOrganizedFolders: boolean;
+
+  /**
+   * Gets the active plans directory path.
+   */
+  public get activePlansRoot(): string {
+    return this._activePlansRoot;
+  }
+
+  /**
+   * Gets the archived plans directory path.
+   */
+  public get archivedPlansRoot(): string {
+    return this._archivedPlansRoot;
+  }
 
   /**
    * Creates a new PlanDocumentManagerImpl.
@@ -17,6 +39,57 @@ export class PlanDocumentManagerImpl implements PlanDocumentManager {
   constructor(workspaceRoot: string) {
     this._markdownProcessor = new MarkdownProcessor();
     this._workspaceRoot = workspaceRoot;
+    this._configManager = ConfigManager.getInstance();
+
+    // Check if organized folder structure is enabled
+    this._useOrganizedFolders = this._configManager.get<string>('plans.folderStructure', 'organized') === 'organized';
+
+    // Set up IPSA directory structure
+    this._ipsaRoot = path.join(this._workspaceRoot, '.ipsa');
+    this._plansRoot = path.join(this._ipsaRoot, 'plans');
+    this._activePlansRoot = path.join(this._plansRoot, 'active');
+    this._archivedPlansRoot = path.join(this._plansRoot, 'archived');
+    this._templatesRoot = path.join(this._plansRoot, 'templates');
+
+    // Ensure directories exist if using organized folders
+    if (this._useOrganizedFolders) {
+      this._ensureDirectoriesExist();
+    }
+  }
+
+  /**
+   * Ensures that all required directories exist.
+   * @private
+   */
+  private async _ensureDirectoriesExist(): Promise<void> {
+    try {
+      await this._ensureDirectoryExists(this._ipsaRoot);
+      await this._ensureDirectoryExists(this._plansRoot);
+      await this._ensureDirectoryExists(this._activePlansRoot);
+      await this._ensureDirectoryExists(this._archivedPlansRoot);
+      await this._ensureDirectoryExists(this._templatesRoot);
+    } catch (error) {
+      throw new Error(`Failed to create IPSA directories: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Ensures that a directory exists, creating it if necessary.
+   * @param dirPath The directory path
+   * @private
+   */
+  private async _ensureDirectoryExists(dirPath: string): Promise<void> {
+    try {
+      const uri = vscode.Uri.file(dirPath);
+      try {
+        await vscode.workspace.fs.stat(uri);
+      } catch {
+        // Directory doesn't exist, create it
+        await vscode.workspace.fs.createDirectory(uri);
+      }
+    } catch (error) {
+      throw new Error(`Failed to create directory: ${dirPath} - ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   /**
@@ -28,11 +101,16 @@ export class PlanDocumentManagerImpl implements PlanDocumentManager {
     // Sanitize problem ID for file name
     const sanitizedId = this._sanitizeFileName(problemId);
 
-    // Create file path
-    const filePath = path.join(this._workspaceRoot, `${sanitizedId}.plan.md`);
+    // Create file path based on configuration
+    let filePath: string;
+    if (this._useOrganizedFolders) {
+      filePath = path.join(this._activePlansRoot, `${sanitizedId}.plan.md`);
+    } else {
+      filePath = path.join(this._workspaceRoot, `${sanitizedId}.plan.md`);
+    }
 
     // Check if file already exists
-    if (await this._fileExists(filePath)) {
+    if (await this.fileExists(filePath)) {
       throw new Error(`Plan document already exists: ${filePath}`);
     }
 
@@ -65,16 +143,43 @@ export class PlanDocumentManagerImpl implements PlanDocumentManager {
    * @returns The loaded plan document
    */
   public async loadPlanDocument(path: string): Promise<PlanDocument> {
-    // Check if file exists
-    if (!await this._fileExists(path)) {
-      throw new Error(`Plan document not found: ${path}`);
+    // Check if file exists at the provided path
+    if (await this.fileExists(path)) {
+      // Read file content
+      const content = await this._readFile(path);
+
+      // Parse Markdown to plan document
+      return this._markdownProcessor.parseMarkdownToPlanDocument(content, path);
     }
 
-    // Read file content
-    const content = await this._readFile(path);
+    // If file doesn't exist at the provided path, try to find it in the organized folder structure
+    if (this._useOrganizedFolders) {
+      // Extract the filename from the path
+      const fileName = path.split('/').pop() || '';
 
-    // Parse Markdown to plan document
-    return this._markdownProcessor.parseMarkdownToPlanDocument(content, path);
+      // Check if the file exists in the active plans directory
+      const activePath = require('path').join(this._activePlansRoot, fileName);
+      if (await this.fileExists(activePath)) {
+        // Read file content
+        const content = await this._readFile(activePath);
+
+        // Parse Markdown to plan document
+        return this._markdownProcessor.parseMarkdownToPlanDocument(content, activePath);
+      }
+
+      // Check if the file exists in the archived plans directory
+      const archivedPath = require('path').join(this._archivedPlansRoot, fileName);
+      if (await this.fileExists(archivedPath)) {
+        // Read file content
+        const content = await this._readFile(archivedPath);
+
+        // Parse Markdown to plan document
+        return this._markdownProcessor.parseMarkdownToPlanDocument(content, archivedPath);
+      }
+    }
+
+    // If we still haven't found the file, throw an error
+    throw new Error(`Plan document not found: ${path}`);
   }
 
   /**
@@ -265,7 +370,7 @@ export class PlanDocumentManagerImpl implements PlanDocumentManager {
    * @param filePath The path to the file
    * @returns True if the file exists, false otherwise
    */
-  private async _fileExists(filePath: string): Promise<boolean> {
+  public async fileExists(filePath: string): Promise<boolean> {
     try {
       const uri = vscode.Uri.file(filePath);
       await vscode.workspace.fs.stat(uri);
@@ -274,6 +379,8 @@ export class PlanDocumentManagerImpl implements PlanDocumentManager {
       return false;
     }
   }
+
+
 
   /**
    * Reads a file.
@@ -302,6 +409,178 @@ export class PlanDocumentManagerImpl implements PlanDocumentManager {
       await vscode.workspace.fs.writeFile(uri, data);
     } catch (error) {
       throw new Error(`Failed to write file: ${filePath} - ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Archives a plan document by moving it to the archived directory.
+   * @param document The document to archive
+   * @returns The updated document with the new path
+   */
+  public async archivePlanDocument(document: PlanDocument): Promise<PlanDocument> {
+    if (!this._useOrganizedFolders) {
+      throw new Error('Archiving is only available when using organized folder structure');
+    }
+
+    const fileName = path.basename(document.path);
+    const newPath = path.join(this._archivedPlansRoot, fileName);
+
+    // Read the current file
+    const content = await this._readFile(document.path);
+
+    // Write to the new location
+    await this._writeFile(newPath, content);
+
+    // Delete the original file
+    await this._deleteFile(document.path);
+
+    // Update the document path
+    const updatedDoc: PlanDocument = {
+      ...document,
+      path: newPath,
+      metadata: {
+        ...document.metadata,
+        lastModified: new Date()
+      }
+    };
+
+    return updatedDoc;
+  }
+
+  /**
+   * Unarchives a plan document by moving it from the archived directory to the active directory.
+   * @param document The document to unarchive
+   * @returns The updated document with the new path
+   */
+  public async unarchivePlanDocument(document: PlanDocument): Promise<PlanDocument> {
+    if (!this._useOrganizedFolders) {
+      throw new Error('Unarchiving is only available when using organized folder structure');
+    }
+
+    const fileName = path.basename(document.path);
+    const newPath = path.join(this._activePlansRoot, fileName);
+
+    // Read the current file
+    const content = await this._readFile(document.path);
+
+    // Write to the new location
+    await this._writeFile(newPath, content);
+
+    // Delete the original file
+    await this._deleteFile(document.path);
+
+    // Update the document path
+    const updatedDoc: PlanDocument = {
+      ...document,
+      path: newPath,
+      metadata: {
+        ...document.metadata,
+        lastModified: new Date()
+      }
+    };
+
+    return updatedDoc;
+  }
+
+  /**
+   * Lists all plan documents in the active directory.
+   * @returns Array of plan document paths
+   */
+  public async listActivePlanDocuments(): Promise<string[]> {
+    if (!this._useOrganizedFolders) {
+      // If not using organized folders, list all plan documents in the workspace root
+      return this._listPlanDocumentsInDirectory(this._workspaceRoot);
+    }
+    return this._listPlanDocumentsInDirectory(this._activePlansRoot);
+  }
+
+  /**
+   * Lists all plan documents in the archived directory.
+   * @returns Array of plan document paths
+   */
+  public async listArchivedPlanDocuments(): Promise<string[]> {
+    if (!this._useOrganizedFolders) {
+      // If not using organized folders, return an empty array
+      return [];
+    }
+    return this._listPlanDocumentsInDirectory(this._archivedPlansRoot);
+  }
+
+  /**
+   * Lists all plan documents in a directory.
+   * @param directoryPath The directory path
+   * @returns Array of plan document paths
+   * @private
+   */
+  private async _listPlanDocumentsInDirectory(directoryPath: string): Promise<string[]> {
+    try {
+      const uri = vscode.Uri.file(directoryPath);
+      const entries = await vscode.workspace.fs.readDirectory(uri);
+
+      // Filter for .plan.md files
+      return entries
+        .filter(([name, type]) => type === vscode.FileType.File && name.endsWith('.plan.md'))
+        .map(([name]) => path.join(directoryPath, name));
+    } catch (error) {
+      throw new Error(`Failed to list plan documents: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Deletes a file.
+   * @param filePath The path to the file
+   * @private
+   */
+  private async _deleteFile(filePath: string): Promise<void> {
+    try {
+      const uri = vscode.Uri.file(filePath);
+      await vscode.workspace.fs.delete(uri);
+    } catch (error) {
+      throw new Error(`Failed to delete file: ${filePath} - ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Migrates existing plan documents from the workspace root to the organized folder structure.
+   * @returns Number of migrated documents
+   */
+  public async migratePlanDocuments(): Promise<number> {
+    if (!this._useOrganizedFolders) {
+      throw new Error('Migration is only available when using organized folder structure');
+    }
+
+    try {
+      // Find all .plan.md files in the workspace root
+      const workspaceUri = vscode.Uri.file(this._workspaceRoot);
+      const entries = await vscode.workspace.fs.readDirectory(workspaceUri);
+
+      // Filter for .plan.md files
+      const planFiles = entries
+        .filter(([name, type]) => type === vscode.FileType.File && name.endsWith('.plan.md'))
+        .map(([name]) => path.join(this._workspaceRoot, name));
+
+      let migratedCount = 0;
+
+      // Migrate each file
+      for (const filePath of planFiles) {
+        const fileName = path.basename(filePath);
+        const newPath = path.join(this._activePlansRoot, fileName);
+
+        // Read the file
+        const content = await this._readFile(filePath);
+
+        // Write to the new location
+        await this._writeFile(newPath, content);
+
+        // Delete the original file
+        await this._deleteFile(filePath);
+
+        migratedCount++;
+      }
+
+      return migratedCount;
+    } catch (error) {
+      throw new Error(`Failed to migrate plan documents: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

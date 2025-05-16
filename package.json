@@ -2,13 +2,14 @@
   "name": "ipsa",
   "displayName": "Iterative Problem-Solving Assistant",
   "description": "A VS Code extension for structured, iterative problem-solving with AI assistants",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "publisher": "ipsa-team",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/ipsa-team/ipsa"
   },
+  "icon": "images/ipsa-icon.png",
   "engines": {
     "vscode": "^1.60.0"
   },
@@ -26,7 +27,12 @@
       "properties": {
         "ipsa.preferredAssistant": {
           "type": "string",
-          "enum": ["clipboard", "copilot", "cursor", "other"],
+          "enum": [
+            "clipboard",
+            "copilot",
+            "cursor",
+            "other"
+          ],
           "default": "clipboard",
           "description": "The preferred AI assistant type to use"
         },
@@ -39,6 +45,50 @@
           "type": "number",
           "default": 5,
           "description": "Maximum number of previous findings to include in prompts"
+        },
+        "ipsa.plans.folderStructure": {
+          "type": "string",
+          "enum": [
+            "flat",
+            "organized"
+          ],
+          "default": "organized",
+          "description": "How plan documents are organized: 'flat' (all in workspace root) or 'organized' (in .ipsa/plans folders)"
+        },
+        "ipsa.output.defaultDocumentationFormat": {
+          "type": "string",
+          "enum": [
+            "markdown",
+            "html",
+            "json"
+          ],
+          "default": "markdown",
+          "description": "Default format for generated documentation"
+        },
+        "ipsa.output.includeCodeSnippets": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to include code snippets in generated documentation by default"
+        },
+        "ipsa.output.includeFindings": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to include findings in generated documentation by default"
+        },
+        "ipsa.output.includeMetrics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to include metrics in generated documentation by default"
+        },
+        "ipsa.output.defaultExportFormat": {
+          "type": "string",
+          "enum": [
+            "markdown",
+            "html",
+            "json"
+          ],
+          "default": "markdown",
+          "description": "Default format for exporting plan documents"
         }
       }
     },
@@ -74,6 +124,90 @@
       {
         "command": "ipsa.managePreferences",
         "title": "IPSA: Manage Preferences"
+      },
+      {
+        "command": "ipsa.constructPrompt",
+        "title": "IPSA: Construct Prompt"
+      },
+      {
+        "command": "ipsa.extractFindings",
+        "title": "IPSA: Extract Findings from Response"
+      },
+      {
+        "command": "ipsa.createFinding",
+        "title": "IPSA: Create Finding from Selection"
+      },
+      {
+        "command": "ipsa.migratePlanDocuments",
+        "title": "IPSA: Migrate Plan Documents to Organized Folder"
+      },
+      {
+        "command": "ipsa.migrateSessionPaths",
+        "title": "IPSA: Update Session Paths to Organized Folder"
+      },
+      {
+        "command": "ipsa.archivePlanDocument",
+        "title": "IPSA: Archive Plan Document"
+      },
+      {
+        "command": "ipsa.startNewIteration",
+        "title": "IPSA: Start New Iteration"
+      },
+      {
+        "command": "ipsa.advanceToNextStep",
+        "title": "IPSA: Advance to Next Step"
+      },
+      {
+        "command": "ipsa.goToPreviousStep",
+        "title": "IPSA: Go to Previous Step"
+      },
+      {
+        "command": "ipsa.skipCurrentStep",
+        "title": "IPSA: Skip Current Step"
+      },
+      {
+        "command": "ipsa.markStepAsCompleted",
+        "title": "IPSA: Mark Current Step as Completed"
+      },
+      {
+        "command": "ipsa.showSessionMetrics",
+        "title": "IPSA: Show Session Metrics"
+      },
+      {
+        "command": "ipsa.configureAssistant",
+        "title": "IPSA: Configure AI Assistant"
+      },
+      {
+        "command": "ipsa.sendPromptToAssistant",
+        "title": "IPSA: Send Prompt to AI Assistant"
+      },
+      {
+        "command": "ipsa.captureAssistantResponse",
+        "title": "IPSA: Capture AI Assistant Response"
+      },
+      {
+        "command": "ipsa.interactWithAssistant",
+        "title": "IPSA: Interact with AI Assistant"
+      },
+      {
+        "command": "ipsa.extractCodeSnippets",
+        "title": "IPSA: Extract Code Snippets"
+      },
+      {
+        "command": "ipsa.applyCodeSnippet",
+        "title": "IPSA: Apply Code Snippet"
+      },
+      {
+        "command": "ipsa.generateDocumentation",
+        "title": "IPSA: Generate Documentation"
+      },
+      {
+        "command": "ipsa.exportPlanDocument",
+        "title": "IPSA: Export Plan Document"
+      },
+      {
+        "command": "ipsa.showIPSAPanel",
+        "title": "IPSA: Show Panel"
       }
     ]
   },
@@ -89,7 +223,8 @@
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
     "start": "node taskmaster-client.js",
-    "generate": "node taskmaster-client.js generate"
+    "generate": "node taskmaster-client.js generate",
+    "vsce:package": "vsce package"
   },
   "devDependencies": {
     "@types/glob": "^7.2.0",
@@ -99,6 +234,9 @@
     "@typescript-eslint/eslint-plugin": "^5.30.0",
     "@typescript-eslint/parser": "^5.30.0",
     "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^2.22.0",
+    "canvas": "^3.1.0",
+    "copy-webpack-plugin": "^13.0.0",
     "eslint": "^8.18.0",
     "glob": "^8.0.3",
     "mocha": "^10.0.0",

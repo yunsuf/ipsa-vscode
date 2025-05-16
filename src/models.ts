@@ -128,23 +128,28 @@ export interface Finding {
   content: string;
 
   /**
-   * Optional metadata about the finding.
+   * Metadata about the finding.
    */
-  metadata?: {
+  metadata: {
     /**
      * The programming language for code findings.
      */
     language?: string;
 
     /**
+     * Tags for categorizing the finding.
+     */
+    tags?: string[];
+
+    /**
      * The source of the finding.
      */
-    source?: string;
+    source: 'agent' | 'user';
 
     /**
      * The timestamp when the finding was created.
      */
-    timestamp?: number;
+    timestamp: number;
   };
 }
 
