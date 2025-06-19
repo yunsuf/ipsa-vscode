@@ -21,7 +21,7 @@ Thank you for your interest in contributing to the Iterative Problem-Solving Ass
 ## Coding Standards
 
 - Follow the existing code style
-- Write tests for new features
+git add .- Write tests for new features
 - Update documentation for significant changes
 
 ## License

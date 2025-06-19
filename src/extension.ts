@@ -1916,8 +1916,398 @@ ${Object.entries(metrics.timePerStep)
   context.subscriptions.push(generateDocumentationCommand);
   context.subscriptions.push(exportPlanDocumentCommand);
 
+  // Register document editor commands
+  const openDocumentEditorCommand = vscode.commands.registerCommand('ipsa.openDocumentEditor', async () => {
+    Logger.log('ipsa.openDocumentEditor command triggered');
+    try {
+      // Check if WebView provider is initialized
+      if (!webViewProvider) {
+        // Initialize it now
+        webViewProvider = new IPSAWebViewProviderImpl(context.extensionUri);
+        Logger.log('WebView provider initialized on-demand');
+      }
+
+      // Get the current session
+      const currentSession = stateManager.getCurrentSession();
+      if (currentSession && planDocumentManager && webViewProvider) {
+        // Load the plan document
+        const planDoc = await planDocumentManager.loadPlanDocument(currentSession.planDocumentPath);
+
+        // Open the document editor in the WebView
+        webViewProvider.openDocumentEditor(planDoc);
+      } else {
+        vscode.window.showErrorMessage('No active session. Please start a session first.');
+      }
+    } catch (error) {
+      Logger.error('Failed to open document editor', error);
+      vscode.window.showErrorMessage(`Failed to open document editor: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  const updateProblemStatementCommand = vscode.commands.registerCommand('ipsa.updateProblemStatement', async (message) => {
+    Logger.log('ipsa.updateProblemStatement command triggered');
+    try {
+      // Get the current session
+      const currentSession = stateManager.getCurrentSession();
+      if (currentSession && planDocumentManager) {
+        // Load the plan document
+        const planDoc = await planDocumentManager.loadPlanDocument(currentSession.planDocumentPath);
+
+        // Update the problem statement
+        planDoc.problemStatement = message.problemStatement;
+
+        // Save the plan document
+        await planDocumentManager.updatePlanDocument(planDoc, {});
+
+        // Show a notification
+        vscode.window.showInformationMessage('Problem statement updated successfully.');
+      } else {
+        vscode.window.showErrorMessage('No active session. Please start a session first.');
+      }
+    } catch (error) {
+      Logger.error('Failed to update problem statement', error);
+      vscode.window.showErrorMessage(`Failed to update problem statement: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  const addPlanStepCommand = vscode.commands.registerCommand('ipsa.addPlanStep', async (message) => {
+    Logger.log('ipsa.addPlanStep command triggered');
+    try {
+      // Get the current session
+      const currentSession = stateManager.getCurrentSession();
+      if (currentSession && planDocumentManager) {
+        // Load the plan document
+        const planDoc = await planDocumentManager.loadPlanDocument(currentSession.planDocumentPath);
+
+        // Create a new step
+        const newStep = {
+          id: `step-${Date.now()}`,
+          description: message.description,
+          status: 'pending' as const,
+          order: planDoc.initialPlan.length + 1
+        };
+
+        // Add the step to the plan
+        planDoc.initialPlan.push(newStep);
+
+        // Save the plan document
+        await planDocumentManager.updatePlanDocument(planDoc, {});
+
+        // Show a notification
+        vscode.window.showInformationMessage('Plan step added successfully.');
+
+        // Update the WebView
+        if (webViewProvider) {
+          webViewProvider.updatePlanDocument(planDoc);
+        }
+      } else {
+        vscode.window.showErrorMessage('No active session. Please start a session first.');
+      }
+    } catch (error) {
+      Logger.error('Failed to add plan step', error);
+      vscode.window.showErrorMessage(`Failed to add plan step: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  const updatePlanStepCommand = vscode.commands.registerCommand('ipsa.updatePlanStep', async (message) => {
+    Logger.log('ipsa.updatePlanStep command triggered');
+    try {
+      // Get the current session
+      const currentSession = stateManager.getCurrentSession();
+      if (currentSession && planDocumentManager) {
+        // Load the plan document
+        const planDoc = await planDocumentManager.loadPlanDocument(currentSession.planDocumentPath);
+
+        // Find the step to update
+        const stepIndex = planDoc.initialPlan.findIndex(step => step.id === message.stepId);
+        if (stepIndex !== -1) {
+          // Update the step
+          if (message.description !== undefined) {
+            planDoc.initialPlan[stepIndex].description = message.description;
+          }
+
+          if (message.status !== undefined) {
+            planDoc.initialPlan[stepIndex].status = message.status;
+          }
+
+          // Save the plan document
+          await planDocumentManager.updatePlanDocument(planDoc, {});
+
+          // Show a notification
+          vscode.window.showInformationMessage('Plan step updated successfully.');
+
+          // Update the WebView
+          if (webViewProvider) {
+            webViewProvider.updatePlanDocument(planDoc);
+          }
+        } else {
+          vscode.window.showErrorMessage(`Step with ID ${message.stepId} not found.`);
+        }
+      } else {
+        vscode.window.showErrorMessage('No active session. Please start a session first.');
+      }
+    } catch (error) {
+      Logger.error('Failed to update plan step', error);
+      vscode.window.showErrorMessage(`Failed to update plan step: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  const removePlanStepCommand = vscode.commands.registerCommand('ipsa.removePlanStep', async (message) => {
+    Logger.log('ipsa.removePlanStep command triggered');
+    try {
+      // Get the current session
+      const currentSession = stateManager.getCurrentSession();
+      if (currentSession && planDocumentManager) {
+        // Load the plan document
+        const planDoc = await planDocumentManager.loadPlanDocument(currentSession.planDocumentPath);
+
+        // Find the step to remove
+        const stepIndex = planDoc.initialPlan.findIndex(step => step.id === message.stepId);
+        if (stepIndex !== -1) {
+          // Remove the step
+          planDoc.initialPlan.splice(stepIndex, 1);
+
+          // Save the plan document
+          await planDocumentManager.updatePlanDocument(planDoc, {});
+
+          // Show a notification
+          vscode.window.showInformationMessage('Plan step removed successfully.');
+
+          // Update the WebView
+          if (webViewProvider) {
+            webViewProvider.updatePlanDocument(planDoc);
+          }
+        } else {
+          vscode.window.showErrorMessage(`Step with ID ${message.stepId} not found.`);
+        }
+      } else {
+        vscode.window.showErrorMessage('No active session. Please start a session first.');
+      }
+    } catch (error) {
+      Logger.error('Failed to remove plan step', error);
+      vscode.window.showErrorMessage(`Failed to remove plan step: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  const reorderPlanStepsCommand = vscode.commands.registerCommand('ipsa.reorderPlanSteps', async (message) => {
+    Logger.log('ipsa.reorderPlanSteps command triggered');
+    try {
+      // Get the current session
+      const currentSession = stateManager.getCurrentSession();
+      if (currentSession && planDocumentManager) {
+        // Load the plan document
+        const planDoc = await planDocumentManager.loadPlanDocument(currentSession.planDocumentPath);
+
+        // Create a map of steps by ID
+        const stepsMap = new Map();
+        planDoc.initialPlan.forEach(step => {
+          stepsMap.set(step.id, step);
+        });
+
+        // Create a new array of steps in the specified order
+        const reorderedSteps = message.stepIds.map((id: string) => stepsMap.get(id)).filter(Boolean);
+
+        // Make sure all steps are included
+        if (reorderedSteps.length !== planDoc.initialPlan.length) {
+          vscode.window.showErrorMessage('Not all steps were included in the reordering.');
+          return;
+        }
+
+        // Update the order property for each step
+        reorderedSteps.forEach((step, index) => {
+          step.order = index + 1;
+        });
+
+        // Update the plan document
+        planDoc.initialPlan = reorderedSteps;
+
+        // Save the plan document
+        await planDocumentManager.updatePlanDocument(planDoc, {});
+
+        // Show a notification
+        vscode.window.showInformationMessage('Plan steps reordered successfully.');
+
+        // Update the WebView
+        if (webViewProvider) {
+          webViewProvider.updatePlanDocument(planDoc);
+        }
+      } else {
+        vscode.window.showErrorMessage('No active session. Please start a session first.');
+      }
+    } catch (error) {
+      Logger.error('Failed to reorder plan steps', error);
+      vscode.window.showErrorMessage(`Failed to reorder plan steps: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  const saveDocumentChangesCommand = vscode.commands.registerCommand('ipsa.saveDocumentChanges', async (message) => {
+    Logger.log('ipsa.saveDocumentChanges command triggered');
+    try {
+      // Get the current session
+      const currentSession = stateManager.getCurrentSession();
+      if (currentSession && planDocumentManager) {
+        // Save the updated plan document
+        await planDocumentManager.updatePlanDocument(message.planDocument, {});
+
+        // Show a notification
+        vscode.window.showInformationMessage('Document changes saved successfully.');
+
+        // Update the WebView
+        if (webViewProvider) {
+          webViewProvider.updatePlanDocument(message.planDocument);
+        }
+      } else {
+        vscode.window.showErrorMessage('No active session. Please start a session first.');
+      }
+    } catch (error) {
+      Logger.error('Failed to save document changes', error);
+      vscode.window.showErrorMessage(`Failed to save document changes: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
   // Add UI commands
   context.subscriptions.push(showIPSAPanelCommand);
+
+  // Add document editor commands
+  context.subscriptions.push(openDocumentEditorCommand);
+  context.subscriptions.push(updateProblemStatementCommand);
+  context.subscriptions.push(addPlanStepCommand);
+  context.subscriptions.push(updatePlanStepCommand);
+  context.subscriptions.push(removePlanStepCommand);
+  context.subscriptions.push(reorderPlanStepsCommand);
+  context.subscriptions.push(saveDocumentChangesCommand);
+
+  // Register findings interface commands
+  const createFindingFromWebViewCommand = vscode.commands.registerCommand('ipsa.createFinding', async (message: any) => {
+    Logger.log('ipsa.createFinding command triggered from WebView');
+    try {
+      // Get the current session
+      const currentSession = stateManager.getCurrentSession();
+
+      if (!currentSession) {
+        vscode.window.showErrorMessage('No active session. Please start a session first.');
+        return;
+      }
+
+      // Check if document manager is initialized
+      if (!planDocumentManager) {
+        vscode.window.showErrorMessage('Document manager not initialized');
+        return;
+      }
+
+      // Get the plan document
+      const planDoc = await planDocumentManager.loadPlanDocument(currentSession.planDocumentPath);
+
+      if (!planDoc) {
+        vscode.window.showErrorMessage('Failed to load plan document');
+        return;
+      }
+
+      // Get the latest iteration
+      const latestIteration = planDoc.iterations[planDoc.iterations.length - 1];
+
+      if (!latestIteration) {
+        vscode.window.showErrorMessage('No iterations found. Please start an iteration first.');
+        return;
+      }
+
+      // Add the finding to the iteration
+      await planDocumentManager.addFinding(planDoc, latestIteration.number, message.finding);
+
+      // Update the WebView with the new findings
+      if (webViewProvider) {
+        const allFindings = planDoc.iterations.flatMap(iteration => iteration.findings || []);
+        webViewProvider.updateFindings(allFindings);
+      }
+
+      vscode.window.showInformationMessage('Finding created successfully');
+    } catch (error) {
+      Logger.error('Failed to create finding from WebView', error);
+      vscode.window.showErrorMessage(`Failed to create finding: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  const deleteFindingCommand = vscode.commands.registerCommand('ipsa.deleteFinding', async (message: any) => {
+    Logger.log('ipsa.deleteFinding command triggered from WebView');
+    try {
+      // Get the current session
+      const currentSession = stateManager.getCurrentSession();
+
+      if (!currentSession) {
+        vscode.window.showErrorMessage('No active session. Please start a session first.');
+        return;
+      }
+
+      // Check if document manager is initialized
+      if (!planDocumentManager) {
+        vscode.window.showErrorMessage('Document manager not initialized');
+        return;
+      }
+
+      // Get the plan document
+      const planDoc = await planDocumentManager.loadPlanDocument(currentSession.planDocumentPath);
+
+      if (!planDoc) {
+        vscode.window.showErrorMessage('Failed to load plan document');
+        return;
+      }
+
+      // Find and remove the finding from all iterations
+      let findingRemoved = false;
+      for (const iteration of planDoc.iterations) {
+        if (iteration.findings) {
+          const findingIndex = iteration.findings.findIndex(f => f.id === message.findingId);
+          if (findingIndex !== -1) {
+            iteration.findings.splice(findingIndex, 1);
+            findingRemoved = true;
+            break;
+          }
+        }
+      }
+
+      if (!findingRemoved) {
+        vscode.window.showErrorMessage('Finding not found');
+        return;
+      }
+
+      // Update the plan document
+      await planDocumentManager.updatePlanDocument(planDoc, {
+        iterations: planDoc.iterations
+      });
+
+      // Update the WebView with the updated findings
+      if (webViewProvider) {
+        const allFindings = planDoc.iterations.flatMap(iteration => iteration.findings || []);
+        webViewProvider.updateFindings(allFindings);
+      }
+
+      vscode.window.showInformationMessage('Finding deleted successfully');
+    } catch (error) {
+      Logger.error('Failed to delete finding from WebView', error);
+      vscode.window.showErrorMessage(`Failed to delete finding: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  const updateFindingsSettingsCommand = vscode.commands.registerCommand('ipsa.updateFindingsSettings', async (message: any) => {
+    Logger.log('ipsa.updateFindingsSettings command triggered from WebView');
+    try {
+      // Store the settings in the configuration
+      const config = vscode.workspace.getConfiguration('ipsa');
+      await config.update('findings.autoExtract', message.settings.autoExtract, vscode.ConfigurationTarget.Workspace);
+      await config.update('findings.preferredTypes', message.settings.preferredTypes, vscode.ConfigurationTarget.Workspace);
+      await config.update('findings.previewBeforeSave', message.settings.previewBeforeSave, vscode.ConfigurationTarget.Workspace);
+
+      vscode.window.showInformationMessage('Findings settings updated successfully');
+    } catch (error) {
+      Logger.error('Failed to update findings settings from WebView', error);
+      vscode.window.showErrorMessage(`Failed to update findings settings: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  // Add findings interface commands to subscriptions
+  context.subscriptions.push(createFindingFromWebViewCommand);
+  context.subscriptions.push(deleteFindingCommand);
+  context.subscriptions.push(updateFindingsSettingsCommand);
 
   // Add event listeners
   context.subscriptions.push(documentSaveListener);

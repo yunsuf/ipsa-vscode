@@ -208,6 +208,34 @@
       {
         "command": "ipsa.showIPSAPanel",
         "title": "IPSA: Show Panel"
+      },
+      {
+        "command": "ipsa.openDocumentEditor",
+        "title": "IPSA: Open Document Editor"
+      },
+      {
+        "command": "ipsa.updateProblemStatement",
+        "title": "IPSA: Update Problem Statement"
+      },
+      {
+        "command": "ipsa.addPlanStep",
+        "title": "IPSA: Add Plan Step"
+      },
+      {
+        "command": "ipsa.updatePlanStep",
+        "title": "IPSA: Update Plan Step"
+      },
+      {
+        "command": "ipsa.removePlanStep",
+        "title": "IPSA: Remove Plan Step"
+      },
+      {
+        "command": "ipsa.reorderPlanSteps",
+        "title": "IPSA: Reorder Plan Steps"
+      },
+      {
+        "command": "ipsa.saveDocumentChanges",
+        "title": "IPSA: Save Document Changes"
       }
     ]
   },

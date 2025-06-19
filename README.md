@@ -4,7 +4,9 @@ A VS Code extension for structured, iterative problem-solving with AI assistants
 
 ## Overview
 
-The Iterative Problem-Solving Assistant (IPSA) is a VS Code extension that helps developers solve complex problems through a structured, iterative approach. It integrates with AI assistants to provide a systematic workflow for breaking down problems, exploring solutions, and documenting the process.
+The Iterative Problem-Solving Assistant (IPSA) is a VS Code extension that helps developers solve complex 
+problems through a structured, iterative approach. It integrates with AI assistants to provide a 
+systematic workflow for breaking down problems, exploring solutions, and documenting the process.
 
 ## Features
 
